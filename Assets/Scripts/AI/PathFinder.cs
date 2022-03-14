@@ -1,9 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using BaseAI;
+using Priority_Queue;
 using UnityEngine;
 
-namespace BaseAI
+namespace AI
 {
     /// <summary>
     /// Делегат для обновления пути - вызывается по завершению построения пути
@@ -24,7 +24,7 @@ namespace BaseAI
         /// <param name="destination">Целевой регион</param>
         /// <param name="movementProperties">Параметры движения</param>
         /// <returns>Список точек маршрута</returns>
-        public List<PathNode> FindPath(PathNode start, BaseRegion destination, MovementProperties movementProperties)
+        public List<PathNode> FindPath(PathNode start, MovementProperties movementProperties)
         {
             //  Реализовать что-то наподобие A* тут
             //  Можно попробовать и по-другому, например, с помощью NaviMesh. Только оно с динамическим регионом не сработает
@@ -59,7 +59,6 @@ namespace BaseAI
 
         public PathFinder()
         {
-
         }
 
         /// <summary>
@@ -67,20 +66,22 @@ namespace BaseAI
         /// </summary>
         /// <param name="node">Точка</param>
         /// <returns></returns>
-        private bool CheckWalkable(ref PathNode node)
+        private bool CheckWalkable(PathNode node)
         {
             //  Сначала проверяем, принадлежит ли точка какому-то региону
-            int regionInd = -1;
+            var regionInd = -1;
             //  Первая проверка - того региона, который в точке указан, это будет быстрее
-            if(node.RegionIndex >= 0 && node.RegionIndex < сartographer.regions.Count)
+            if (node.RegionIndex >= 0 && node.RegionIndex < сartographer.regions.Count)
             {
                 if (сartographer.regions[node.RegionIndex].Contains(node))
                     regionInd = node.RegionIndex;
-            } else
+            }
+            else
             {
                 var region = сartographer.GetRegion(node);
                 if (region != null) regionInd = region.index;
             }
+
             if (regionInd == -1) return false;
             node.RegionIndex = regionInd;
 
@@ -88,7 +89,7 @@ namespace BaseAI
             //  Технически, тут можно как-то корректировать высоту - с небольшим шагом, позволить объекту спускаться или подниматься
             //  Но на это сейчас сил уже нет. Кстати, эту штуку можно через коллайдеры попробовать сделать
 
-            float distToFloor = node.Position.y - сartographer.SceneTerrain.SampleHeight(node.Position);
+            var distToFloor = node.Position.y - сartographer.SceneTerrain.SampleHeight(node.Position);
             if (distToFloor > 2.0f || distToFloor < 0.0f)
             {
                 //Debug.Log("Incorrect node height");
@@ -102,17 +103,15 @@ namespace BaseAI
 
             //if (node.Parent != null && Physics.CheckSphere(node.Position, 2.0f, obstaclesLayerMask))
             //if (node.Parent != null && Physics.Linecast(node.Parent.Position, node.Position, obstaclesLayerMask))
-            if (node.Parent != null && Physics.CheckSphere(node.Position, 1.0f, obstaclesLayerMask))
-                return false;
-            
-            return true;
+            return node.Parent == null || !Physics.CheckSphere(node.Position, 1.0f, obstaclesLayerMask);
         }
 
         private static float Heur(PathNode node, PathNode target, MovementProperties properties)
         {
             //  Эвристику подобрать!!!! - сейчас учитываются уже затраченное время, оставшееся до цели время и угол поворота
-            
-            float angle = Mathf.Abs(Vector3.Angle(node.Direction, target.Position - node.Position)) / properties.rotationAngle;
+
+            float angle = Mathf.Abs(Vector3.Angle(node.Direction, target.Position - node.Position)) /
+                          properties.rotationAngle;
             return node.TimeMoment + 2 * node.Distance(target) / properties.maxSpeed + angle * properties.deltaTime;
         }
 
@@ -122,46 +121,119 @@ namespace BaseAI
         /// <param name="node"></param>
         /// <param name="properties"></param>
         /// <returns></returns>
-        public List<PathNode> GetNeighbours(PathNode node, MovementProperties properties)
+        public IEnumerable<PathNode> GetNeighbours(PathNode node, MovementProperties properties)
         {
             //  Вот тут хардкодить не надо, это должно быть в properties
             //  У нас есть текущая точка, и свойства движения (там скорость, всякое такое)
             //float step = 1f;
-            float step = properties.deltaTime * properties.maxSpeed;
+            var step = properties.deltaTime * properties.maxSpeed;
 
-            List<PathNode> result = new List<PathNode>();
+            // var result = new List<PathNode>();
 
             //  Внешний цикл отвечает за длину шага - либо 0 (остаёмся в точке), либо 1 - шагаем вперёд
-            for (int mult = 0; mult <= 1; ++mult)
+            for (var mult = 0; mult <= 1; ++mult)
                 //  Внутренний цикл перебирает углы поворота
-                for (int angleStep = -properties.angleSteps; angleStep <= properties.angleSteps; ++angleStep)
+            for (var angleStep = -properties.angleSteps; angleStep <= properties.angleSteps; ++angleStep)
+            {
+                var next = node.SpawnChild(
+                    step * mult,
+                    angleStep * properties.rotationAngle,
+                    properties.deltaTime
+                );
+                next.Parent = node;
+
+                //  Точка передаётся по ссылке, т.к. возможно обновление региона, которому она принадлежит
+                if (CheckWalkable(next))
                 {
-                    PathNode next = node.SpawnChildren(step * mult, angleStep * properties.rotationAngle, properties.deltaTime);
-                    //  Точка передаётся по ссылке, т.к. возможно обновление региона, которому она принадлежит
-                    if (CheckWalkable(ref next))
-                    {
-                        result.Add(next);
-                        Debug.DrawLine(node.Position, next.Position, Color.blue, 10f);
-                    }
+                    yield return next;
+                    Debug.DrawLine(node.Position, next.Position, Color.blue, 10000f, false);
                 }
-            return result;
+            }
+
+            // return result;
         }
 
         /// <summary>
         /// Собственно метод построения пути
         /// Если ничего не построил, то возвращает null в качестве списка вершин
         /// </summary>
-        private bool FindPath(PathNode start, PathNode target, MovementProperties movementProperties, UpdatePathListDelegate updater)
+        private bool FindPath(
+            PathNode start,
+            PathNode target,
+            MovementProperties movementProperties,
+            UpdatePathListDelegate updater
+        )
         {
-            /*
-            List<PathNode> result = new List<PathNode>();
+            //*
+            Debug.Log($"Initial len = {Vector3.Distance(start.Position, target.Position)}");
+            var result = new List<PathNode>();
+
+            var nodes = new SlowPriorityQueue<PathNode>();
+            nodes.Enqueue(Vector3.Distance(start.Position, target.Position), start);
+
+            PathNode res = null;
+
+            var i = 0;
+            var minLen = float.MaxValue;
+            PathNode minLenNode = null;
+            while (nodes.Count > 0 && i < 10000)
+            {
+                i++;
+                var (heur0, current) = nodes.Dequeue();
+                if (Vector3.Distance(current.Position, target.Position) < 5.0)
+                {
+                    res = current;
+                    break;
+                }
+
+                var neighbours = GetNeighbours(current, movementProperties);
+                foreach (var neighbor in neighbours)
+                {
+                    var newDist = Vector3.Distance(neighbor.Position, target.Position);
+                    nodes.Enqueue(newDist, neighbor);
+                    if (newDist < minLen)
+                    {
+                        minLen = newDist;
+                        minLenNode = neighbor;
+                    }
+                    //grid[current.x, current.y].Distance + neighborDist;
+                    //PathNode.Dist(grid[node.x, node.y], grid[current.x, current.y]);
+
+                    // if (grid[neighbor.x, neighbor.y].Distance > newDist)
+                    // {
+                    //     grid[neighbor.x, neighbor.y].ParentNode = grid[current.x, current.y];
+                    //     grid[neighbor.x, neighbor.y].Distance = newDist;
+                    //     var heur = newDist + PathNode.Dist(grid[neighbor.x, neighbor.y],
+                    //         grid[finishNode.x, finishNode.y]);
+                    //     nodes.Enqueue(heur, neighbor);
+                    // }
+                }
+            }
+
+            if (res == null)
+            {
+                result.Add(minLenNode);
+                Debug.Log($"res == null, minLen = {minLen}");
+            }
+            else
+            {
+                Debug.Log($"i = {i}");
+                while (res != null)
+                {
+                    result.Add(res);
+                    res = res.Parent;
+                }
+
+                result.Reverse();
+            }
 
             updater(result);
 
+            Debug.Log(
+                $"Финальная точка маршрута:{result[result.Count - 1].Position}; target:{target.Position.ToString()}");
             Debug.Log("Маршрут обновлён");
-            Debug.Log("Финальная точка маршрута : " + result[result.Count-1].Position.ToString() + "; target : " + target.Position.ToString());
-            return;
-            */
+            return true;
+            //*/
             //  Вызываем обновление пути. Теоретически мы обращаемся к списку из другого потока, надо бы синхронизировать как-то
         }
 
@@ -170,7 +242,8 @@ namespace BaseAI
         /// потокобезопасен, т.к. не изменяет данные о регионах сценах и прочем - работает как ReadOnly
         /// </summary>
         /// <returns></returns>
-        public bool BuildRoute(PathNode start, PathNode finish, MovementProperties movementProperties, UpdatePathListDelegate updater)
+        public bool BuildRoute(PathNode start, PathNode finish, MovementProperties movementProperties,
+            UpdatePathListDelegate updater)
         {
             //  Тут какие-то базовые проверки при необходимости, и запуск задачи построения пути в отдельном потоке
             //Task taskA = new Task(() => FindPath(start, finish, movementProperties, updater));

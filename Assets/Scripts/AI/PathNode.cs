@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-namespace BaseAI
+namespace AI
 {
     /// <summary>
     /// Точка пути - изменяем по сравенению с предыдущим проектом
@@ -32,16 +30,15 @@ namespace BaseAI
         /// <summary>
         /// Конструирование вершины на основе родительской (если она указана)
         /// </summary>
-        /// <param name="ParentNode">Если существует родительская вершина, то её указываем</param>
-        public PathNode(PathNode ParentNode = null)
+        /// <param name="parentNode">Если существует родительская вершина, то её указываем</param>
+        public PathNode(PathNode parentNode = null)
         {
-            Parent = ParentNode;
+            Parent = parentNode;
         }
 
         /// <summary>
         /// Конструирование вершины на основе родительской (если она указана)
         /// </summary>
-        /// <param name="ParentNode">Если существует родительская вершина, то её указываем</param>
         public PathNode(Vector3 currentPosition, Vector3 currentDirection)
         {
             Position = currentPosition;      //  Позицию задаём
@@ -82,12 +79,14 @@ namespace BaseAI
         /// <param name="rotationAngle">Угол поворота вокруг оси OY в градусах</param>
         /// <param name="timeDelta">Впремя, потраченное на шаг</param>
         /// <returns></returns>
-        public PathNode SpawnChildren(float stepLength, float rotationAngle, float timeDelta)
+        public PathNode SpawnChild(float stepLength, float rotationAngle, float timeDelta)
         {
-            PathNode result = new PathNode(this);
+            var result = new PathNode(this)
+            {
+                //  Вращаем вокруг вертикальной оси, что в принципе не очень хорошо - надо бы более универсально, нормаль к поверхности взять, и всё такое
+                Direction = Quaternion.AngleAxis(rotationAngle, Vector3.up) * Direction
+            };
 
-            //  Вращаем вокруг вертикальной оси, что в принципе не очень хорошо - надо бы более универсально, нормаль к поверхности взять, и всё такое
-            result.Direction = Quaternion.AngleAxis(rotationAngle, Vector3.up) * Direction;
             result.Direction.Normalize();
 
             //  Перемещаемся в новую позицию

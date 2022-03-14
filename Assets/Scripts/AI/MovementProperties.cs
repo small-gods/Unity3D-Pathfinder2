@@ -1,7 +1,6 @@
 ﻿using System;
-using UnityEngine;
 
-namespace BaseAI
+namespace AI
 {
     /// <summary>
     /// Параметры движения агента - как может поворачивать, какие шаги делать
@@ -12,15 +11,15 @@ namespace BaseAI
         /// <summary>
         /// Максимальная скорость движения агента
         /// </summary>
-        public float maxSpeed;
+        public float maxSpeed = 1.0f;
         /// <summary>
         /// Шаг поворота агента в градусах
         /// </summary>
-        public float rotationAngle;
+        public float rotationAngle = 30.0f;
         /// <summary>
         /// Количество дискретных углов поворота в одну сторону. 0 - только движение вперёд, 1 - влево/прямо/вправо, и т.д.
         /// </summary>
-        public int angleSteps;
+        public int angleSteps = 1;
         /// <summary>
         /// Длина прыжка (фиксированная)
         /// </summary>
@@ -32,7 +31,7 @@ namespace BaseAI
         /// <summary>
         /// эпсилон-окрестность точки, в пределах которой точка считается достигнутой
         /// </summary>
-        public float epsilon = 0.1f;
+        public float epsilon = 0.5f;
         /// <summary>
         /// Дельта времени (шаг по времени), с которой строится маршрут
         /// </summary>

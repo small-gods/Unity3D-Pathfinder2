@@ -1,15 +1,14 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BaseAI;
 using UnityEngine;
 
-/// <summary>
-/// По-хорошему это октодерево должно быть, но неохота.
-/// Класс, владеющий полной информацией о сцене - какие области где расположены, 
-/// как связаны между собой, и прочая информация.
-/// Должен по координатам точки определять номер области.
-/// </summary>
-
-namespace BaseAI
+// <summary>
+// По-хорошему это октодерево должно быть, но неохота.
+// Класс, владеющий полной информацией о сцене - какие области где расположены, 
+// как связаны между собой, и прочая информация.
+// Должен по координатам точки определять номер области.
+// </summary>
+namespace AI
 {
     /// <summary>
     /// Базовый класс для реализации региона - квадратной или круглой области
@@ -154,8 +153,10 @@ namespace BaseAI
         /// </summary>
         public int index { get; set; } = -1;
         
-        bool IBaseRegion.Dynamic { get; } = false;
-        void IBaseRegion.TransformPoint(PathNode parent, PathNode node) { return; }
+        bool IBaseRegion.Dynamic => false;
+
+        void IBaseRegion.TransformPoint(PathNode parent, PathNode node) {
+        }
 
         public IList<IBaseRegion> Neighbors { get; set; } = new List<IBaseRegion>();
         
@@ -281,10 +282,10 @@ namespace BaseAI
         /// <returns>Индекс региона, -1 если не принадлежит (не проходима)</returns>
         public IBaseRegion GetRegion(PathNode node)
         {
-            for (var i = 0; i < regions.Count; ++i)
-                //  Метод полиморфный и для всяких платформ должен быть корректно в них реализован
-                if (regions[i].Contains(node))
-                    return regions[i];
+            foreach (var region in regions)
+                if (region.Contains(node))
+                    return region;
+
             Debug.Log("Not found region for " + node.Position.ToString());
             return null;
         }

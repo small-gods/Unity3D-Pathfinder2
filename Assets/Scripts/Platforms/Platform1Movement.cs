@@ -1,12 +1,14 @@
 ﻿using BaseAI;
 using System.Collections;
 using System.Collections.Generic;
+using AI;
 using UnityEngine;
 
-public class Platform1Movement : MonoBehaviour, BaseAI.IBaseRegion
+public class Platform1Movement : MonoBehaviour, IBaseRegion
 {
     private Vector3 initialPosisition;
     [SerializeField] private bool moving;
+    public GameObject rotationCenterObject;
     private Vector3 rotationCenter;
     private Vector3 rotationStartPos;
     [SerializeField] private float rotationSpeed = 1.0f;
@@ -22,11 +24,11 @@ public class Platform1Movement : MonoBehaviour, BaseAI.IBaseRegion
     public int index { get; set; } = -1;
     bool IBaseRegion.Dynamic { get; } = true;
 
-    public IList<BaseAI.IBaseRegion> Neighbors { get; set; } = new List<BaseAI.IBaseRegion>();
+    public IList<IBaseRegion> Neighbors { get; set; } = new List<IBaseRegion>();
 
     void Start()
     {
-        rotationCenter = transform.position + 10 * Vector3.back;
+        rotationCenter = rotationCenterObject.transform.position;
         rotationStartPos = transform.position;
     }
 
