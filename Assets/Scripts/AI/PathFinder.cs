@@ -254,10 +254,54 @@ namespace AI
             //Task taskA = new Task(() => FindPath(start, finish, movementProperties, updater));
             //taskA.Start();
             //  Из функции выходим, когда путь будет построен - запустится делегат и обновит список точек
-            FindPath(start, finish, movementProperties, updater);
+            FindPath(start, BuildGlobalRoute(start, finish), movementProperties, updater);
             return true;
         }
-
+        // Возвращает точку в следующем регионе
+        public PathNode BuildGlobalRoute(PathNode start, PathNode finish)
+        {
+            var startRegion = сartographer.GetRegion(start);
+            var finishRegion = сartographer.GetRegion(finish);
+            if(startRegion == null)
+            {
+                Debug.LogError("Not found started region!");
+                return finish;
+            }
+            if (finishRegion == null)
+            {
+                Debug.LogError("Not found finish region!");
+                return finish;
+            }
+            var queue = new SimplePriorityQueue<IBaseRegion, float>();
+            queue.Enqueue(startRegion, 0);
+            var visited = new Dictionary<int, IBaseRegion>();
+            visited.Add(startRegion.index, startRegion);
+            while(queue.Count != 0)
+            {
+                var dist = queue.GetPriority(queue.First);
+                var region = queue.Dequeue();
+                foreach(var next in region.Neighbors)
+                {
+                    if (visited.ContainsKey(next.index))
+                        continue;
+                    visited.Add(next.index, region);
+                    queue.Enqueue(next, dist + 1);
+                }
+            }
+            if (!visited.ContainsKey(finishRegion.index))
+            {
+                Debug.LogError("Not found path to finish region!");
+                return finish;
+            }
+            var nextRegion = finishRegion;
+            while(visited[nextRegion.index] != startRegion)
+            {
+                nextRegion = visited[nextRegion.index];
+            }
+            if (nextRegion == finishRegion)
+                return finish;
+            return new PathNode(nextRegion.GetCenter(), start.Direction); // TODO: set correct direction
+        }
         //// Start is called before the first frame update
         void Start()
         {

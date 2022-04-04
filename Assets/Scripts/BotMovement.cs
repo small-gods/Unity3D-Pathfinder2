@@ -91,7 +91,9 @@ public class BotMovement : MonoBehaviour
         }
 
         //  Создаём целевую точку из объекта на сцене. В целом это должно задаваться в рамках алгоритма как-то
-        FinishPoint = new PathNode(finish.transform.position, Vector3.zero);
+        var pos = finish.transform.position;
+        pos.y = this.transform.position.y;
+        FinishPoint = new PathNode(pos, Vector3.zero);
         lastPathfinderRequest = -5.0f;
     }
 
