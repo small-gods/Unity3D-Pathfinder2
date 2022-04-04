@@ -160,8 +160,10 @@ public class BotMovement : MonoBehaviour
     /// </summary>
     private void RequestPathfinder()
     {
-        if (FinishPoint == null || pathUpdateRequested || PlannedPath != null) return;
-        if (Time.fixedTime - lastPathfinderRequest < 0.5f) return;
+        if (FinishPoint == null || pathUpdateRequested || PlannedPath != null) 
+            return;
+        if (Time.fixedTime - lastPathfinderRequest < 0.5f) 
+            return;
 
         //  Тут ещё бы проверить, что финальная точка в нашем текущем списке точек не совпадает с целью, иначе плохо всё будет
         if (AtFinish() || CurrentPathEndAtFinish())
@@ -343,6 +345,11 @@ public class BotMovement : MonoBehaviour
         if (!UpdateCurrentTargetPoint())
             //  Это ситуация когда идти некуда - цели нет
             return false;
+        if (_currentTarget == null)
+        {
+            Debug.Log("Пучкин, за что????");
+            return false;
+        }
 
         //  Если находимся в прыжке, то ничего делать не надо
         if (CheckJumping()) return false;

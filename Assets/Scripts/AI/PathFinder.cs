@@ -131,7 +131,7 @@ namespace AI
             // var result = new List<PathNode>();
 
             //  Внешний цикл отвечает за длину шага - либо 0 (остаёмся в точке), либо 1 - шагаем вперёд
-            for (var mult = 0; mult <= 1; ++mult)
+            for (var mult = 1; mult <= 1; ++mult)
                 //  Внутренний цикл перебирает углы поворота
             for (var angleStep = -properties.angleSteps; angleStep <= properties.angleSteps; ++angleStep)
             {
@@ -143,14 +143,19 @@ namespace AI
                 next.Parent = node;
 
                 //  Точка передаётся по ссылке, т.к. возможно обновление региона, которому она принадлежит
-                if (CheckWalkable(next))
-                {
-                    yield return next;
-                    Debug.DrawLine(node.Position, next.Position, Color.blue, 10000f, false);
-                }
+                if (!CheckWalkable(next)) 
+                    continue;
+                
+                yield return next;
+                Debug.DrawLine(node.Position, next.Position, Color.blue, 10000f, false);
             }
-
             // return result;
+        }
+
+        private float Distance(PathNode from, PathNode to, MovementProperties movementProperties)
+        {
+            return Vector3.Distance(from.Position, to.Position)// / movementProperties.maxSpeed
+                  + Vector3.Angle(from.Direction, to.Direction) / 360;// / movementProperties.rotationAngle);
         }
 
         /// <summary>
@@ -165,22 +170,22 @@ namespace AI
         )
         {
             //*
-            Debug.Log($"Initial len = {Vector3.Distance(start.Position, target.Position)}");
+            Debug.Log($"Initial len = {Distance(start, target, movementProperties)}");
             var result = new List<PathNode>();
 
             var nodes = new SlowPriorityQueue<PathNode>();
-            nodes.Enqueue(Vector3.Distance(start.Position, target.Position), start);
+            nodes.Enqueue(Distance(start, target, movementProperties), start);
 
             PathNode res = null;
 
             var i = 0;
             var minLen = float.MaxValue;
             PathNode minLenNode = null;
-            while (nodes.Count > 0 && i < 10000)
+            while (nodes.Count > 0 && i < 20000)
             {
                 i++;
                 var (heur0, current) = nodes.Dequeue();
-                if (Vector3.Distance(current.Position, target.Position) < 5.0)
+                if (Distance(current, target, movementProperties) < 5.0)
                 {
                     res = current;
                     break;
@@ -189,7 +194,7 @@ namespace AI
                 var neighbours = GetNeighbours(current, movementProperties);
                 foreach (var neighbor in neighbours)
                 {
-                    var newDist = Vector3.Distance(neighbor.Position, target.Position);
+                    var newDist = Distance(neighbor, target, movementProperties);
                     nodes.Enqueue(newDist, neighbor);
                     if (newDist < minLen)
                     {
