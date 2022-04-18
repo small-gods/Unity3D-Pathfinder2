@@ -62,23 +62,24 @@ namespace AI
         /// </summary>
         /// <param name="node">Точка</param>
         /// <returns></returns>
-        public bool CheckWalkable(PathNode node)
+        public int CheckWalkable(PathNode node)
         {
             //  Сначала проверяем, принадлежит ли точка какому-то региону
             var regionInd = -1;
             //  Первая проверка - того региона, который в точке указан, это будет быстрее
-            if (node.RegionIndex >= 0 && node.RegionIndex < сartographer.regions.Count)
+            if (node.RegionIndex >= 0)
             {
                 if (сartographer.regions[node.RegionIndex].Contains(node))
                     regionInd = node.RegionIndex;
             }
-            else
+
+            if (regionInd == -1)
             {
                 var region = сartographer.GetRegion(node);
                 if (region != null) regionInd = region.index;
             }
 
-            if (regionInd == -1) return false;
+            if (regionInd == -1) return 1;
             node.RegionIndex = regionInd;
 
             //  Следующая проверка - на то, что над поверхностью расстояние не слишком большое
@@ -86,10 +87,10 @@ namespace AI
             //  Но на это сейчас сил уже нет. Кстати, эту штуку можно через коллайдеры попробовать сделать
 
             var distToFloor = node.Position.y - сartographer.SceneTerrain.SampleHeight(node.Position);
-            if (distToFloor > 2.0f || distToFloor < 0.0f)
+            if (distToFloor > 1.5f || distToFloor < 0.0f)
             {
                 //Debug.Log("Incorrect node height");
-                return false;
+                return 2;
             }
 
             //  Ну и осталось проверить препятствия - для движущихся не сработает такая штука, потому что проверка выполняется для
@@ -99,7 +100,7 @@ namespace AI
 
             //if (node.Parent != null && Physics.CheckSphere(node.Position, 2.0f, obstaclesLayerMask))
             //if (node.Parent != null && Physics.Linecast(node.Parent.Position, node.Position, obstaclesLayerMask))
-            return node.Parent == null || !Physics.CheckSphere(node.Position, 1.0f, obstaclesLayerMask);
+            return node.Parent == null || !Physics.CheckSphere(node.Position, 1.0f, obstaclesLayerMask) ? 0 : 3;
         }
 
         public static float Heur(PathNode node, PathNode target, MovementProperties properties)
@@ -124,6 +125,8 @@ namespace AI
             //float step = 1f;
             var step = properties.deltaTime * properties.maxSpeed;
 
+            Debug.Log($"max Speed {properties.maxSpeed}");
+
             // var result = new List<PathNode>();
 
             //  Внешний цикл отвечает за длину шага - либо 0 (остаёмся в точке), либо 1 - шагаем вперёд
@@ -139,8 +142,21 @@ namespace AI
                 next.Parent = node;
 
                 //  Точка передаётся по ссылке, т.к. возможно обновление региона, которому она принадлежит
-                if (!CheckWalkable(next))
-                    continue;
+                switch (CheckWalkable(next))
+                {
+                    case 0:
+                        break;
+                    case 1:
+                        Debug.DrawLine(node.Position, next.Position, Color.green, 10000f, false);
+                        continue;
+                    case 2:
+                        Debug.DrawLine(node.Position, next.Position, Color.yellow, 10000f, false);
+                        continue;
+                    case 3:
+                        Debug.DrawLine(node.Position, next.Position, Color.magenta, 10000f, false);
+                        continue;
+                }
+
 
                 yield return next;
                 Debug.DrawLine(node.Position, next.Position, Color.blue, 10000f, false);
@@ -189,6 +205,7 @@ namespace AI
         {
             var startRegion = сartographer.GetRegion(start);
             var finishRegion = сartographer.GetRegion(finish);
+
             if (startRegion == null)
             {
                 Debug.LogError("Not found started region!");
@@ -198,6 +215,11 @@ namespace AI
             if (finishRegion == null)
             {
                 Debug.LogError("Not found finish region!");
+                return finish;
+            }
+
+            if (startRegion == finishRegion)
+            {
                 return finish;
             }
 
@@ -230,12 +252,17 @@ namespace AI
                 nextRegion = visited[nextRegion.index];
             }
 
-            if (nextRegion == finishRegion)
-                return finish;
+            // if (nextRegion == finishRegion)
+            // {
+            //     Debug.DrawLine(finish.Position, finish.Position + Vector3.up * 100, Color.red, 1000000);
+            //     return finish;
+            // }
+
             var toCenter = Vector3.Normalize(nextRegion.GetCenter() - start.Position);
-            var collision = nextRegion.Collider.ClosestPoint(start.Position) + toCenter * 5.0f;
-            Debug.DrawLine(collision, collision + Vector3.up, Color.red, 1000000);
+            var collision = nextRegion.Collider.ClosestPoint(start.Position) + toCenter * 3.0f;
             collision.y = start.Position.y;
+            Debug.DrawLine(collision, collision + Vector3.up * 10, Color.red, 1000000);
+            Debug.Log($" {collision}");
             return new PathNode(collision, start.Direction); // TODO: set correct direction
         }
 

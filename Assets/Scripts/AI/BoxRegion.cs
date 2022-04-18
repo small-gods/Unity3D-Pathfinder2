@@ -88,7 +88,7 @@ namespace AI
         {
             throw new System.NotImplementedException();
         }
-        
+
         public List<PathNode> FindPath(
             PathNode start,
             PathNode target,
@@ -111,10 +111,17 @@ namespace AI
             {
                 i++;
                 var (heur0, current) = nodes.Dequeue();
-                if (ctx.Distance(current, target, movementProperties) < 5.0)
+                if (ctx.Distance(current, target, movementProperties) <
+                    movementProperties.deltaTime * movementProperties.maxSpeed / movementProperties.closeEnslowment)
                 {
                     res = current;
                     break;
+                }
+
+                var backupSpeed = movementProperties.maxSpeed;
+                if (Vector3.Distance(current.Position, target.Position) < movementProperties.targetClose)
+                {
+                    movementProperties.maxSpeed = backupSpeed / movementProperties.closeEnslowment;
                 }
 
                 var neighbours = ctx.GetNeighbours(current, movementProperties);
@@ -129,6 +136,8 @@ namespace AI
                         res = minLenNode;
                     }
                 }
+
+                movementProperties.maxSpeed = backupSpeed;
             }
 
             if (res == null)
@@ -147,10 +156,10 @@ namespace AI
 
                 result.Reverse();
             }
-            
+
             Debug.Log(
                 $"Финальная точка маршрута:{result[result.Count - 1].Position}; target:{target.Position.ToString()}");
-            
+
             return result;
         }
     }

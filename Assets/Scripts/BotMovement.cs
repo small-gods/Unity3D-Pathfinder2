@@ -181,12 +181,16 @@ public class BotMovement : MonoBehaviour
 
         //  Тут два варианта - либо запускаем построение пути от хвоста списка, либо от текущей точки
         PathNode startOfRoute = null;
-        // if (CurrentPath != null && CurrentPath.Count > 0)
-        //     startOfRoute = CurrentPath.Last();
-        // else
-        //  Из начального положения начнём - вот только со временем беда. Технически надо бы брать момент в будущем, когда 
-        //  начнём движение, но мы не знаем когда маршрут построится. Надеемся, что быстро
-        startOfRoute = new PathNode(transform.position, transform.forward);
+        if (CurrentPath != null && CurrentPath.Count > 0)
+            startOfRoute = CurrentPath.Last();
+        else
+        {
+            //  Из начального положения начнём - вот только со временем беда. Технически надо бы брать момент в будущем, когда 
+            //  начнём движение, но мы не знаем когда маршрут построится. Надеемся, что быстро
+            var forward = transform.forward;
+            forward.y = 0;
+            startOfRoute = new PathNode(transform.position, Vector3.Normalize(forward));
+        }
 
         pathUpdateRequested = true;
 

@@ -66,7 +66,9 @@ namespace AI
         /// <returns></returns>
         public bool Contains(PathNode node)
         {
-            return body.bounds.Contains(node.Position);
+            var position = node.Position;
+            position.y = body.center.y;
+            return body.bounds.Contains(position);
         }
 
         /// <summary>
@@ -110,7 +112,8 @@ namespace AI
         {
             if (_state == State.NotStarted)
             {
-                var predicted = new PathNode(PlatformMovement.PredictLocation(0.8f), start.Direction, true);
+                
+                var predicted = new PathNode(PlatformMovement.PredictLocation(1.0f), start.Direction, true);
                 var dist = ctx.Distance(predicted, start, movementProperties);
                 if (dist < 8.0)
                 {
@@ -122,17 +125,15 @@ namespace AI
             else if (_state == State.JumpedOnPlatform)
             {
                 var dist = ctx.Distance(start, target, movementProperties);
-                if (dist < 12.0)
+                if (dist < 10.0)
                 {
                     Debug.Log("Can jump");
                     _state = State.JumpedOnPlatform;
                     target.JumpNode = true;
                     return new List<PathNode> {target};
                 }
-                Debug.Log($"Can not jump: dist = {dist}");
+                // Debug.Log($"Can not jump: dist = {dist}");
             }
-
-
 
             var result = new List<PathNode>();
 

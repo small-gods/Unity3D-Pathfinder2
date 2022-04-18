@@ -11,7 +11,7 @@ namespace AI
         /// <summary>
         /// Максимальная скорость движения агента
         /// </summary>
-        public float maxSpeed = 0.5f;
+        public float maxSpeed = 0.1f;
         /// <summary>
         /// Шаг поворота агента в градусах
         /// </summary>
@@ -40,5 +40,9 @@ namespace AI
         /// Шаг по пространству, с которым происходит дискретизация области (для отсечения посещённых точек)
         /// </summary>
         public float deltaDist = 1f;
+
+        public float targetClose = 5f;
+
+        public float closeEnslowment = 2f;
     }
 }
