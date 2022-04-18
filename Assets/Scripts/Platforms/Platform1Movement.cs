@@ -17,6 +17,9 @@ public class Platform1Movement : MonoBehaviour, IBaseRegion
     /// Тело региона - коллайдер
     /// </summary>
     public SphereCollider body;
+    
+    public Collider Collider => body;
+
 
     /// <summary>
     /// Индекс региона в списке регионов

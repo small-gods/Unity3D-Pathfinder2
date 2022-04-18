@@ -2,6 +2,7 @@
 using BaseAI;
 using Priority_Queue;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace AI
 {
@@ -37,11 +38,6 @@ namespace AI
     /// </summary>
     public class PathFinder : MonoBehaviour
     {
-        /// <summary>
-        /// Объект сцены, на котором размещены коллайдеры
-        /// </summary>
-        [SerializeField] private GameObject CollidersCollection;
-
         /// <summary>
         /// Картограф - класс, хранящий информацию о геометрии уровня, регионах и прочем
         /// </summary>
@@ -143,9 +139,9 @@ namespace AI
                 next.Parent = node;
 
                 //  Точка передаётся по ссылке, т.к. возможно обновление региона, которому она принадлежит
-                if (!CheckWalkable(next)) 
+                if (!CheckWalkable(next))
                     continue;
-                
+
                 yield return next;
                 Debug.DrawLine(node.Position, next.Position, Color.blue, 10000f, false);
             }
@@ -154,8 +150,8 @@ namespace AI
 
         private float Distance(PathNode from, PathNode to, MovementProperties movementProperties)
         {
-            return Vector3.Distance(from.Position, to.Position)// / movementProperties.maxSpeed
-                  + Vector3.Angle(from.Direction, to.Direction) / 360;// / movementProperties.rotationAngle);
+            return Vector3.Distance(from.Position, to.Position) // / movementProperties.maxSpeed
+                   + Vector3.Angle(from.Direction, to.Direction) / 360; // / movementProperties.rotationAngle);
         }
 
         /// <summary>
@@ -169,7 +165,6 @@ namespace AI
             UpdatePathListDelegate updater
         )
         {
-            //*
             Debug.Log($"Initial len = {Distance(start, target, movementProperties)}");
             var result = new List<PathNode>();
 
@@ -200,18 +195,8 @@ namespace AI
                     {
                         minLen = newDist;
                         minLenNode = neighbor;
+                        res = minLenNode;
                     }
-                    //grid[current.x, current.y].Distance + neighborDist;
-                    //PathNode.Dist(grid[node.x, node.y], grid[current.x, current.y]);
-
-                    // if (grid[neighbor.x, neighbor.y].Distance > newDist)
-                    // {
-                    //     grid[neighbor.x, neighbor.y].ParentNode = grid[current.x, current.y];
-                    //     grid[neighbor.x, neighbor.y].Distance = newDist;
-                    //     var heur = newDist + PathNode.Dist(grid[neighbor.x, neighbor.y],
-                    //         grid[finishNode.x, finishNode.y]);
-                    //     nodes.Enqueue(heur, neighbor);
-                    // }
                 }
             }
 
@@ -257,30 +242,33 @@ namespace AI
             FindPath(start, BuildGlobalRoute(start, finish), movementProperties, updater);
             return true;
         }
+
         // Возвращает точку в следующем регионе
         public PathNode BuildGlobalRoute(PathNode start, PathNode finish)
         {
             var startRegion = сartographer.GetRegion(start);
             var finishRegion = сartographer.GetRegion(finish);
-            if(startRegion == null)
+            if (startRegion == null)
             {
                 Debug.LogError("Not found started region!");
                 return finish;
             }
+
             if (finishRegion == null)
             {
                 Debug.LogError("Not found finish region!");
                 return finish;
             }
+
             var queue = new SimplePriorityQueue<IBaseRegion, float>();
             queue.Enqueue(startRegion, 0);
             var visited = new Dictionary<int, IBaseRegion>();
             visited.Add(startRegion.index, startRegion);
-            while(queue.Count != 0)
+            while (queue.Count != 0)
             {
                 var dist = queue.GetPriority(queue.First);
                 var region = queue.Dequeue();
-                foreach(var next in region.Neighbors)
+                foreach (var next in region.Neighbors)
                 {
                     if (visited.ContainsKey(next.index))
                         continue;
@@ -288,35 +276,32 @@ namespace AI
                     queue.Enqueue(next, dist + 1);
                 }
             }
+
             if (!visited.ContainsKey(finishRegion.index))
             {
                 Debug.LogError("Not found path to finish region!");
                 return finish;
             }
+
             var nextRegion = finishRegion;
-            while(visited[nextRegion.index] != startRegion)
+            while (visited[nextRegion.index] != startRegion)
             {
                 nextRegion = visited[nextRegion.index];
             }
+
             if (nextRegion == finishRegion)
                 return finish;
             return new PathNode(nextRegion.GetCenter(), start.Direction); // TODO: set correct direction
         }
-        //// Start is called before the first frame update
+
         void Start()
         {
-            //  Инициализируем картографа, ну и всё вроде бы
-            сartographer = new Cartographer(CollidersCollection);
+            // ну и всё вроде бы
+            сartographer = new Cartographer(gameObject);
             obstaclesLayerMask = 1 << LayerMask.NameToLayer("Obstacles");
             var rend = GetComponent<Renderer>();
             if (rend != null)
                 rayRadius = rend.bounds.size.y / 2.5f;
         }
-
-        //// Update is called once per frame
-        //void Update()
-        //{
-
-        //}
     }
 }

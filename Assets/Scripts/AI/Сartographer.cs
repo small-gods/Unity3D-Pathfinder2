@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using BaseAI;
 using UnityEngine;
 
@@ -79,6 +80,8 @@ namespace AI
         /// </summary>
         /// <returns></returns>
         Vector3 GetCenter();
+
+        Collider Collider { get; }
     }
 
     /// <summary>
@@ -91,6 +94,8 @@ namespace AI
         /// </summary>
         public SphereCollider body;
 
+        public Collider Collider => body;
+
         /// <summary>
         /// Расстояние транзита через регион
         /// </summary>
@@ -102,9 +107,16 @@ namespace AI
         public int index { get; set; } = -1;
 
         bool IBaseRegion.Dynamic { get; } = false;
-        void IBaseRegion.TransformPoint(PathNode parent, PathNode node) { return; }
 
-        void IBaseRegion.TransformGlobalToLocal(PathNode node) { /*ничего не делаем - регион статический*/}
+        void IBaseRegion.TransformPoint(PathNode parent, PathNode node)
+        {
+            return;
+        }
+
+        void IBaseRegion.TransformGlobalToLocal(PathNode node)
+        {
+            /*ничего не делаем - регион статический*/
+        }
 
         public IList<IBaseRegion> Neighbors { get; set; } = new List<IBaseRegion>();
 
@@ -119,13 +131,20 @@ namespace AI
         /// </summary>
         /// <param name="node"></param>
         /// <returns></returns>
-        public float SqrDistanceTo(PathNode node) { return body.bounds.SqrDistance(node.Position); }
+        public float SqrDistanceTo(PathNode node)
+        {
+            return body.bounds.SqrDistance(node.Position);
+        }
+
         /// <summary>
         /// Проверка принадлежности точки региону
         /// </summary>
         /// <param name="node"></param>
         /// <returns></returns>
-        public bool Contains(PathNode node) { return body.bounds.Contains(node.Position); }
+        public bool Contains(PathNode node)
+        {
+            return body.bounds.Contains(node.Position);
+        }
 
         /// <summary>
         /// Время перехода через область насквозь, от одного до другого 
@@ -161,14 +180,25 @@ namespace AI
         /// </summary>
         public BoxCollider body;
 
+        public Collider Collider => body;
+
         /// <summary>
         /// Индекс региона в списке регионов
         /// </summary>
         public int index { get; set; } = -1;
 
         bool IBaseRegion.Dynamic { get; } = false;
-        void IBaseRegion.TransformPoint(PathNode parent, PathNode node) { return; }
-        void IBaseRegion.TransformGlobalToLocal(PathNode node) { /*ничего не делаем - регион статический*/}
+
+        void IBaseRegion.TransformPoint(PathNode parent, PathNode node)
+        {
+            return;
+        }
+
+        void IBaseRegion.TransformGlobalToLocal(PathNode node)
+        {
+            /*ничего не делаем - регион статический*/
+        }
+
         public IList<IBaseRegion> Neighbors { get; set; } = new List<IBaseRegion>();
 
         /// <summary>
@@ -187,14 +217,20 @@ namespace AI
         /// </summary>
         /// <param name="node"></param>
         /// <returns></returns>
-        public float SqrDistanceTo(PathNode node) { return body.bounds.SqrDistance(node.Position); }
+        public float SqrDistanceTo(PathNode node)
+        {
+            return body.bounds.SqrDistance(node.Position);
+        }
 
         /// <summary>
         /// Проверка принадлежности точки региону
         /// </summary>
         /// <param name="node"></param>
         /// <returns></returns>
-        public bool Contains(PathNode node) { return body.bounds.Contains(node.Position); }
+        public bool Contains(PathNode node)
+        {
+            return body.bounds.Contains(node.Position);
+        }
 
         /// <summary>
         /// Время перехода через область насквозь, от одного до другого 
@@ -229,12 +265,12 @@ namespace AI
         public Terrain SceneTerrain;
 
         // Start is called before the first frame update
-        public Cartographer(GameObject collidersCollection)
+        public Cartographer(GameObject surface)
         {
             //  Получить Terrain. Пробуем просто найти Terrain на сцене
             try
             {
-                SceneTerrain = (Terrain)Object.FindObjectOfType(typeof(Terrain));
+                SceneTerrain = (Terrain) Object.FindObjectOfType(typeof(Terrain));
             }
             catch (System.Exception e)
             {
@@ -249,61 +285,35 @@ namespace AI
             //  не сработает для динамических регионов (коллайдеры которых перемещаются) - они автоматически не установят связи.
             //  Поэтому открываем картинку RegionsMap.png в корне проекта, и ручками дорисовываем регионы, и связи между ними.
 
-            var colliders = collidersCollection.GetComponents<Collider>();
+            var colliders = surface.GetComponentsInChildren<Collider>();
             foreach (var collider in colliders)
             {
-                if (collider.GetType() == typeof(BoxCollider))
+                IBaseRegion region = collider switch
                 {
-                    regions.Add(new BoxRegion((BoxCollider)collider));
-                    regions[regions.Count - 1].index = regions.Count - 1;
-                    continue;
-                }
-                if (collider.GetType() == typeof(SphereCollider))
-                {
-                    regions.Add(new SphereRegion((SphereCollider)collider));
-                    regions[regions.Count - 1].index = regions.Count - 1;
-                    continue;
-                }
-
-                throw new System.Exception("You can't add any other types of colliders except of Box and Sphere!");
+                    BoxCollider boxCollider => new BoxRegion(boxCollider),
+                    SphereCollider sphereCollider => new SphereRegion(sphereCollider),
+                    _ => throw new System.Exception(
+                        "You can't add any other types of colliders except of Box and Sphere!"
+                    ),
+                };
+                regions.Add(region);
+                regions[regions.Count - 1].index = regions.Count - 1;
             }
 
-            var platform = GameObject.FindObjectOfType<Platform1Movement>();
-            regions.Add(platform);
+            for (var i = 0; i < regions.Count; i++)
+            for (var j = i + 1; j < regions.Count; j++)
+                if (regions[i].Collider.bounds.Intersects(regions[j].Collider.bounds))
+                {
+                    regions[i].Neighbors.Add(regions[j]);
+                    regions[j].Neighbors.Add(regions[i]);
+                }
 
-            for (int i = 0; i < regions.Count; ++i)
-                Debug.Log("Region : " + i + " -> " + regions[i].GetCenter().ToString());
-
-            //  Настраиваем связи между регионами - не самая лучшая идея, но для крупных регионов сойдёт
-            regions[0].Neighbors.Add(regions[1]);
-            regions[0].Neighbors.Add(regions[3]);
-
-            regions[1].Neighbors.Add(regions[0]);
-            regions[1].Neighbors.Add(regions[2]);
-
-            regions[2].Neighbors.Add(regions[1]);
-            regions[2].Neighbors.Add(regions[4]);
-
-            regions[3].Neighbors.Add(regions[0]);
-            regions[3].Neighbors.Add(regions[9]);
-
-            regions[4].Neighbors.Add(regions[2]);
-
-            regions[5].Neighbors.Add(regions[7]);
-            regions[5].Neighbors.Add(regions[9]);
-
-            regions[6].Neighbors.Add(regions[8]);
-            regions[6].Neighbors.Add(regions[7]);
-
-            regions[7].Neighbors.Add(regions[5]);
-            regions[7].Neighbors.Add(regions[6]);
-
-            regions[8].Neighbors.Add(regions[6]);
-
-            regions[9].Neighbors.Add(regions[3]);
-            regions[9].Neighbors.Add(regions[5]);
-            //  Платформы потом. Для них реализовать класс "BaseRegion", и его подсовывать в этот список, обновляя 
-            //  списки смежности
+            for (var i = 0; i < regions.Count; i++)
+            {
+                Debug.Log($"Region : {i} ({regions[i].GetType()}, {regions[i].GetCenter()}) -> {string.Join(", ", regions[i].Neighbors.Select(it => it.index))}");
+            }
+            // for (int i = 0; i < regions.Count; ++i)
+            //     Debug.Log("Region : " + i + " -> " + regions[i].GetCenter().ToString());
         }
 
         /// <summary>
