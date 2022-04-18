@@ -11,7 +11,7 @@ namespace AI
         /// <summary>
         /// Максимальная скорость движения агента
         /// </summary>
-        public float maxSpeed = 1.0f;
+        public float maxSpeed = 0.5f;
         /// <summary>
         /// Шаг поворота агента в градусах
         /// </summary>

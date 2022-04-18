@@ -7,9 +7,7 @@ using UnityEngine;
 
 public class Platform1Movement : MonoBehaviour
 {
-    private Vector3 initialPosisition;
     [SerializeField] private bool moving;
-    public GameObject rotationCenterObject;
     private Vector3 rotationCenter;
     private Vector3 rotationStartPos;
     [SerializeField] private float rotationSpeed = 1.0f;
@@ -17,10 +15,7 @@ public class Platform1Movement : MonoBehaviour
     /// <summary>
     /// Тело региона - коллайдер
     /// </summary>
-    public SphereCollider body;
-    
-    public Collider Collider => body;
-
+    [SerializeField] private GameObject platform;
 
     /// <summary>
     /// Индекс региона в списке регионов
@@ -31,14 +26,22 @@ public class Platform1Movement : MonoBehaviour
 
     void Start()
     {
-        rotationCenter = rotationCenterObject.transform.position;
-        rotationStartPos = transform.position;
+        rotationCenter = transform.position;
+        rotationStartPos = platform.transform.position;
     }
 
     void Update()
     {
         if (!moving) return;
 
-        transform.RotateAround(rotationCenter, Vector3.up, Time.deltaTime*rotationSpeed);
+        platform.transform.RotateAround(rotationCenter, Vector3.up, Time.deltaTime * rotationSpeed);
+    }
+
+    public Vector3 PredictLocation(float deltaTime)
+    {
+        platform.transform.RotateAround(rotationCenter, Vector3.up, deltaTime * rotationSpeed);
+        var position = platform.transform.position;
+        platform.transform.RotateAround(rotationCenter, Vector3.up, -deltaTime * rotationSpeed);
+        return position;
     }
 }

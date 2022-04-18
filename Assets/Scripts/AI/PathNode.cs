@@ -39,7 +39,7 @@ namespace AI
         /// <summary>
         /// Конструирование вершины на основе родительской (если она указана)
         /// </summary>
-        public PathNode(Vector3 currentPosition, Vector3 currentDirection)
+        public PathNode(Vector3 currentPosition, Vector3 currentDirection, bool jumpNode = false)
         {
             Position = currentPosition;      //  Позицию задаём
             Direction = currentDirection;    //  Направление отсутствует
@@ -47,6 +47,7 @@ namespace AI
             Parent = null;                   //  Родителя нет
             RegionIndex = -1;
             H = 0;
+            JumpNode = jumpNode;
         }
 
         /// <summary>

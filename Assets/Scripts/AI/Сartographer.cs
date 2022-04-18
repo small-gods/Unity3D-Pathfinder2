@@ -126,7 +126,10 @@ namespace AI
                 IBaseRegion region = collider switch
                 {
                     BoxCollider boxCollider => new BoxRegion(boxCollider),
-                    SphereCollider sphereCollider => new SphereRegion(sphereCollider),
+                    SphereCollider sphereCollider => new SphereRegion(sphereCollider)
+                    {
+                        PlatformMovement = sphereCollider.gameObject.GetComponent<Platform1Movement>()
+                    },
                     _ => throw new System.Exception(
                         "You can't add any other types of colliders except of Box and Sphere!"
                     ),

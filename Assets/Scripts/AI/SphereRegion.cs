@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.UI;
 using UnityEngine;
 
 namespace AI
@@ -15,6 +16,8 @@ namespace AI
         public SphereCollider body;
 
         public Collider Collider => body;
+
+        public Platform1Movement PlatformMovement;
 
         /// <summary>
         /// Расстояние транзита через регион
@@ -89,6 +92,15 @@ namespace AI
             throw new System.NotImplementedException();
         }
 
+        enum State
+        {
+            NotStarted,
+            JumpedOnPlatform,
+            JumpOnShore,
+        }
+
+        private State _state = State.NotStarted;
+
         public List<PathNode> FindPath(
             PathNode start,
             PathNode target,
@@ -96,10 +108,39 @@ namespace AI
             PathFinder ctx
         )
         {
-            return new List<PathNode>
+            if (_state == State.NotStarted)
             {
-                target
-            };
+                var predicted = new PathNode(PlatformMovement.PredictLocation(0.8f), start.Direction, true);
+                var dist = ctx.Distance(predicted, start, movementProperties);
+                if (dist < 8.0)
+                {
+                    Debug.Log("Can jump");
+                    _state = State.JumpedOnPlatform;
+                    return new List<PathNode> {predicted};
+                }
+            }
+            else if (_state == State.JumpedOnPlatform)
+            {
+                var dist = ctx.Distance(start, target, movementProperties);
+                if (dist < 12.0)
+                {
+                    Debug.Log("Can jump");
+                    _state = State.JumpedOnPlatform;
+                    target.JumpNode = true;
+                    return new List<PathNode> {target};
+                }
+                Debug.Log($"Can not jump: dist = {dist}");
+            }
+
+
+
+            var result = new List<PathNode>();
+
+            var direction = Vector3.Normalize(GetCenter() - start.Position);
+            // result.Add(new PathNode(start.Position, direction));
+            // result.Add(start);
+
+            return result;
         }
     }
 }

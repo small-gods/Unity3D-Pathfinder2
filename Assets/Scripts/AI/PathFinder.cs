@@ -232,7 +232,11 @@ namespace AI
 
             if (nextRegion == finishRegion)
                 return finish;
-            return new PathNode(nextRegion.GetCenter(), start.Direction); // TODO: set correct direction
+            var toCenter = Vector3.Normalize(nextRegion.GetCenter() - start.Position);
+            var collision = nextRegion.Collider.ClosestPoint(start.Position) + toCenter * 5.0f;
+            Debug.DrawLine(collision, collision + Vector3.up, Color.red, 1000000);
+            collision.y = start.Position.y;
+            return new PathNode(collision, start.Direction); // TODO: set correct direction
         }
 
         void Start()
