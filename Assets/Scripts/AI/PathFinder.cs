@@ -62,7 +62,7 @@ namespace AI
         /// </summary>
         /// <param name="node">Точка</param>
         /// <returns></returns>
-        private bool CheckWalkable(PathNode node)
+        public bool CheckWalkable(PathNode node)
         {
             //  Сначала проверяем, принадлежит ли точка какому-то региону
             var regionInd = -1;
@@ -102,7 +102,7 @@ namespace AI
             return node.Parent == null || !Physics.CheckSphere(node.Position, 1.0f, obstaclesLayerMask);
         }
 
-        private static float Heur(PathNode node, PathNode target, MovementProperties properties)
+        public static float Heur(PathNode node, PathNode target, MovementProperties properties)
         {
             //  Эвристику подобрать!!!! - сейчас учитываются уже затраченное время, оставшееся до цели время и угол поворота
 
@@ -148,7 +148,7 @@ namespace AI
             // return result;
         }
 
-        private float Distance(PathNode from, PathNode to, MovementProperties movementProperties)
+        public float Distance(PathNode from, PathNode to, MovementProperties movementProperties)
         {
             return Vector3.Distance(from.Position, to.Position) // / movementProperties.maxSpeed
                    + Vector3.Angle(from.Direction, to.Direction) / 360; // / movementProperties.rotationAngle);
@@ -165,63 +165,8 @@ namespace AI
             UpdatePathListDelegate updater
         )
         {
-            Debug.Log($"Initial len = {Distance(start, target, movementProperties)}");
-            var result = new List<PathNode>();
-
-            var nodes = new SlowPriorityQueue<PathNode>();
-            nodes.Enqueue(Distance(start, target, movementProperties), start);
-
-            PathNode res = null;
-
-            var i = 0;
-            var minLen = float.MaxValue;
-            PathNode minLenNode = null;
-            while (nodes.Count > 0 && i < 20000)
-            {
-                i++;
-                var (heur0, current) = nodes.Dequeue();
-                if (Distance(current, target, movementProperties) < 5.0)
-                {
-                    res = current;
-                    break;
-                }
-
-                var neighbours = GetNeighbours(current, movementProperties);
-                foreach (var neighbor in neighbours)
-                {
-                    var newDist = Distance(neighbor, target, movementProperties);
-                    nodes.Enqueue(newDist, neighbor);
-                    if (newDist < minLen)
-                    {
-                        minLen = newDist;
-                        minLenNode = neighbor;
-                        res = minLenNode;
-                    }
-                }
-            }
-
-            if (res == null)
-            {
-                result.Add(minLenNode);
-                Debug.Log($"res == null, minLen = {minLen}");
-            }
-            else
-            {
-                Debug.Log($"i = {i}");
-                while (res != null)
-                {
-                    result.Add(res);
-                    res = res.Parent;
-                }
-
-                result.Reverse();
-            }
-
-            updater(result);
-
-            Debug.Log(
-                $"Финальная точка маршрута:{result[result.Count - 1].Position}; target:{target.Position.ToString()}");
-            Debug.Log("Маршрут обновлён");
+            var region = сartographer.GetRegion(start);
+            updater(region.FindPath(start, target, movementProperties, this));
             return true;
             //*/
             //  Вызываем обновление пути. Теоретически мы обращаемся к списку из другого потока, надо бы синхронизировать как-то
@@ -235,10 +180,6 @@ namespace AI
         public bool BuildRoute(PathNode start, PathNode finish, MovementProperties movementProperties,
             UpdatePathListDelegate updater)
         {
-            //  Тут какие-то базовые проверки при необходимости, и запуск задачи построения пути в отдельном потоке
-            //Task taskA = new Task(() => FindPath(start, finish, movementProperties, updater));
-            //taskA.Start();
-            //  Из функции выходим, когда путь будет построен - запустится делегат и обновит список точек
             FindPath(start, BuildGlobalRoute(start, finish), movementProperties, updater);
             return true;
         }
